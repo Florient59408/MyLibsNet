@@ -67,41 +67,27 @@ namespace MyLibs.Serialisation
                 }
                 case Mode.JSON:
                 {
-                    if(_indent)
+                    if (!_append)
                     {
-                        if (_append)
+                        using (StreamWriter writer = new StreamWriter(path))
                         {
-                            using (StreamWriter file = new StreamWriter(path, true))
-                            {
-                                file.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
-                            }
-                        }
-                        else
-                        {
-                            using (StreamWriter file = new StreamWriter(path, false))
-                            {
-                                    file.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
-                            }
+                            if (!_indent)
+                                writer.WriteLine(JsonConvert.SerializeObject(data));
+                            else
+                                writer.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
                         }
                     }
                     else
                     {
-                        if (_append)
+                        using (StreamWriter writer = new StreamWriter(path, true))
                         {
-                            using (StreamWriter file = new StreamWriter(path, true))
-                            {
-                                file.WriteLine(JsonConvert.SerializeObject(data));
-                            }
-                        }
-                        else
-                        {
-                            using (StreamWriter file = new StreamWriter(path, false))
-                            {
-                                file.WriteLine(JsonConvert.SerializeObject(data));
-                            }
+                            if (!_indent)
+                                JsonConvert.SerializeObject(data);
+                            else
+                                JsonConvert.SerializeObject(data, Formatting.Indented);
                         }
                     }
-                break;
+                    break;
                 }
             }
         }
