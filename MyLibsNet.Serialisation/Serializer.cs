@@ -1,25 +1,138 @@
-﻿using System.IO;
+﻿using Newtonsoft.Json;
+using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Xml.Serialization;
 
 namespace MyLibs.Serialisation
-{
-    public class Serializer
+{  
+    public enum Mode
     {
-        public void Serialize<T>(T data, string path)
+        JSON,
+        XML,
+        BIN
+    }
+    public class Serializer<T> where T : new()
+    {
+
+        private XmlSerializer xmlSerializer = new XmlSerializer(typeof(T));
+        private BinaryFormatter binaryFormatter = new BinaryFormatter();
+        private Mode _mode;
+        private bool _append;
+        private bool _indent;
+        public Serializer(Mode mode, bool append = false, bool indent = false)
         {
-            using (StreamWriter file = new StreamWriter(path, true))
+            _mode = mode;
+            _append = append;
+            _indent = indent;
+        }
+        public void Serialize(T data, string path)
+        {
+            switch (_mode)
             {
-                BinaryFormatter bf = new BinaryFormatter();
-                bf.Serialize(file.BaseStream, data);
+                case Mode.BIN:
+                {
+                    if (_append)
+                    {
+                        using (StreamWriter file = new StreamWriter(path, true))
+                        {
+                            binaryFormatter.Serialize(file.BaseStream, data);
+                        }
+                    }
+                    else
+                    {
+                        using (StreamWriter file = new StreamWriter(path, false))
+                        {
+                            binaryFormatter.Serialize(file.BaseStream, data);
+                        }
+                    }
+                    break;
+                }
+                case Mode.XML:
+                {
+                    if (_append)
+                    {
+                        using (StreamWriter file = new StreamWriter(path, true))
+                        {
+                            xmlSerializer.Serialize(file.BaseStream, data);
+                        }
+                    }
+                    else
+                    {
+                        using (StreamWriter file = new StreamWriter(path, false))
+                        {
+                            xmlSerializer.Serialize(file.BaseStream, data);
+                        }
+                    }
+                    break;
+                }
+                case Mode.JSON:
+                {
+                    if(_indent)
+                    {
+                        if (_append)
+                        {
+                            using (StreamWriter file = new StreamWriter(path, true))
+                            {
+                                file.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
+                            }
+                        }
+                        else
+                        {
+                            using (StreamWriter file = new StreamWriter(path, false))
+                            {
+                                    file.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (_append)
+                        {
+                            using (StreamWriter file = new StreamWriter(path, true))
+                            {
+                                file.WriteLine(JsonConvert.SerializeObject(data));
+                            }
+                        }
+                        else
+                        {
+                            using (StreamWriter file = new StreamWriter(path, false))
+                            {
+                                file.WriteLine(JsonConvert.SerializeObject(data));
+                            }
+                        }
+                    }
+                break;
+                }
             }
         }
-        public T Deserialize<T>(string path)
+        public T Deserialize(string path)
         {
-            using (StreamReader file = new StreamReader(path))
+            var t = new T();
+            switch(_mode)
             {
-                BinaryFormatter bf = new BinaryFormatter();
-                return (T)bf.Deserialize(file.BaseStream);
+                case Mode.BIN:
+                {
+                    using (StreamReader file = new StreamReader(path))
+                    {
+                        return (T)binaryFormatter.Deserialize(file.BaseStream);
+                    }
+                }
+                case Mode.XML:
+                {
+                    using (StreamReader file = new StreamReader(path))
+                    {
+                        return (T)xmlSerializer.Deserialize(file.BaseStream);
+                    }
+                }
+                case Mode.JSON:
+                {
+                    using (StreamReader file = new StreamReader(path))
+                    {
+                        return JsonConvert.DeserializeObject<T>(file.ReadToEnd());
+                    }
+                }
             }
+            return t;
         }
     }
 }
