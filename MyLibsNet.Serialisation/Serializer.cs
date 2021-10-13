@@ -28,7 +28,10 @@ namespace MyLibs.Serialisation
 
             deserializers = new Dictionary<Mode, Func<string, T>>();
             deserializers.Add(Mode.BIN, DeserializeBinary);
+            deserializers.Add(Mode.XML, DeserializeXml);
+            deserializers.Add(Mode.JSON, DeserializeJson);
         }
+
 
         #region Serialize
         public void Serialize(T data, string path)
@@ -76,6 +79,23 @@ namespace MyLibs.Serialisation
             {
                 var binaryFormatter = new BinaryFormatter();
                 return (T)binaryFormatter.Deserialize(file.BaseStream);
+            }
+        }
+
+        private T DeserializeXml(string path)
+        {
+            using (StreamReader file = new StreamReader(path))
+            {
+                var xmlSerialize = new XmlSerializer(typeof(T));
+                return (T)xmlSerialize.Deserialize(file.BaseStream);
+            }
+        }
+
+        private T DeserializeJson(string path)
+        {
+            using (StreamReader file = new StreamReader(path))
+            {
+                return JsonConvert.DeserializeObject<T>(file.ReadToEnd());
             }
         }
         #endregion
