@@ -1,4 +1,6 @@
 ﻿using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml.Serialization;
@@ -11,114 +13,71 @@ namespace MyLibs.Serialisation
         XML,
         BIN
     }
-    public class Serializer<T> where T : new()
+    public class Serializer<T> 
     {
-
-        private XmlSerializer xmlSerializer = new XmlSerializer(typeof(T));
-        private BinaryFormatter binaryFormatter = new BinaryFormatter();
         private Mode _mode;
-        private bool _append;
-        private bool _indent;
-        public Serializer(Mode mode, bool append = false, bool indent = false)
+        private Dictionary<Mode, Action<T, string>> serializers;
+        private Dictionary<Mode, Func<string, T>> deserializers;
+        public Serializer(Mode mode)
         {
             _mode = mode;
-            _append = append;
-            _indent = indent;
+            serializers = new Dictionary<Mode, Action<T, string>>();
+            serializers.Add(Mode.BIN, SerializeBinary);
+            serializers.Add(Mode.XML, SerializeXml);
+            serializers.Add(Mode.JSON, SerializeJson);
+
+            deserializers = new Dictionary<Mode, Func<string, T>>();
+            deserializers.Add(Mode.BIN, DeserializeBinary);
         }
+
+        #region Serialize
         public void Serialize(T data, string path)
         {
-            switch (_mode)
+            serializers[_mode](data, path);
+        }
+
+        private void SerializeJson(T data, string path)
+        {
+            using (StreamWriter file = new StreamWriter(path, true))
             {
-                case Mode.BIN:
-                {
-                    if (_append)
-                    {
-                        using (StreamWriter file = new StreamWriter(path, true))
-                        {
-                            binaryFormatter.Serialize(file.BaseStream, data);
-                        }
-                    }
-                    else
-                    {
-                        using (StreamWriter file = new StreamWriter(path, false))
-                        {
-                            binaryFormatter.Serialize(file.BaseStream, data);
-                        }
-                    }
-                    break;
-                }
-                case Mode.XML:
-                {
-                    if (_append)
-                    {
-                        using (StreamWriter file = new StreamWriter(path, true))
-                        {
-                            xmlSerializer.Serialize(file.BaseStream, data);
-                        }
-                    }
-                    else
-                    {
-                        using (StreamWriter file = new StreamWriter(path, false))
-                        {
-                            xmlSerializer.Serialize(file.BaseStream, data);
-                        }
-                    }
-                    break;
-                }
-                case Mode.JSON:
-                {
-                    if (!_append)
-                    {
-                        using (StreamWriter writer = new StreamWriter(path))
-                        {
-                            if (!_indent)
-                                writer.WriteLine(JsonConvert.SerializeObject(data));
-                            else
-                                writer.WriteLine(JsonConvert.SerializeObject(data, Formatting.Indented));
-                        }
-                    }
-                    else
-                    {
-                        using (StreamWriter writer = new StreamWriter(path, true))
-                        {
-                            if (!_indent)
-                                JsonConvert.SerializeObject(data);
-                            else
-                                JsonConvert.SerializeObject(data, Formatting.Indented);
-                        }
-                    }
-                    break;
-                }
+                JsonSerializer jsonSerializer = new JsonSerializer();
+                jsonSerializer.Serialize(file, data);
             }
         }
+
+        private  void SerializeXml(T data, string path)
+        {
+            using (StreamWriter file = new StreamWriter(path, true))
+            {
+                var xmlSerializer = new XmlSerializer(typeof(T));
+                xmlSerializer.Serialize(file.BaseStream, data);
+            }
+        }
+
+        private void SerializeBinary(T data, string path)
+        {
+            using (StreamWriter file = new StreamWriter(path, true))
+            {
+                var binaryFormatter = new BinaryFormatter();
+                binaryFormatter.Serialize(file.BaseStream, data);
+            }
+        }
+        #endregion
+
+        #region Deserialize
         public T Deserialize(string path)
         {
-            var t = new T();
-            switch(_mode)
-            {
-                case Mode.BIN:
-                {
-                    using (StreamReader file = new StreamReader(path))
-                    {
-                        return (T)binaryFormatter.Deserialize(file.BaseStream);
-                    }
-                }
-                case Mode.XML:
-                {
-                    using (StreamReader file = new StreamReader(path))
-                    {
-                        return (T)xmlSerializer.Deserialize(file.BaseStream);
-                    }
-                }
-                case Mode.JSON:
-                {
-                    using (StreamReader file = new StreamReader(path))
-                    {
-                        return JsonConvert.DeserializeObject<T>(file.ReadToEnd());
-                    }
-                }
-            }
-            return t;
+            return deserializers[_mode](path);
         }
+
+        private T DeserializeBinary(string path)
+        {
+            using (StreamReader file = new StreamReader(path))
+            {
+                var binaryFormatter = new BinaryFormatter();
+                return (T)binaryFormatter.Deserialize(file.BaseStream);
+            }
+        }
+        #endregion
     }
 }
