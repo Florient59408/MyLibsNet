@@ -43,7 +43,7 @@ namespace MyLibs.Serialisation
 
         private void SerializeJson(T data)
         {
-            using (StreamWriter file = new StreamWriter(_path, true))
+            using (StreamWriter file = new StreamWriter(_path, false))
             {
                 JsonSerializer jsonSerializer = new JsonSerializer();
                 jsonSerializer.Serialize(file, data);
@@ -52,7 +52,7 @@ namespace MyLibs.Serialisation
 
         private  void SerializeXml(T data)
         {
-            using (StreamWriter file = new StreamWriter(_path, true))
+            using (StreamWriter file = new StreamWriter(_path, false))
             {
                 var xmlSerializer = new XmlSerializer(typeof(T));
                 xmlSerializer.Serialize(file.BaseStream, data);
@@ -61,7 +61,7 @@ namespace MyLibs.Serialisation
 
         private void SerializeBinary(T data)
         {
-            using (StreamWriter file = new StreamWriter(_path, true))
+            using (StreamWriter file = new StreamWriter(_path, false))
             {
                 var binaryFormatter = new BinaryFormatter();
                 binaryFormatter.Serialize(file.BaseStream, data);
